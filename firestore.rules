@@ -1,0 +1,185 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isConfiguredOwner() {
+      return isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        request.auth.token.email == 'kodir1988@gmail.com';
+    }
+
+    // Entity Validators
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role']) &&
+        data.keys().hasOnly(['email', 'displayName', 'role', 'avatarUrl', 'createdAt', 'updatedAt']) &&
+        data.email is string && data.email.size() <= 100 &&
+        data.role is string && (data.role == 'owner' || data.role == 'admin') &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 500));
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['title', 'ownerId', 'status']) &&
+        data.keys().hasOnly(['title', 'description', 'category', 'status', 'format', 'duration', 'timeline', 'script', 'voiceId', 'tags', 'ownerId', 'renderedUrl', 'createdAt', 'updatedAt']) &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        data.ownerId == request.auth.uid &&
+        data.status is string && (data.status in ['draft', 'editing', 'rendering', 'rendered', 'scheduled', 'published', 'failed']) &&
+        (!('category' in data) || (data.category is string && data.category in ['gaming', 'towboats', 'tarot', 'comedy', 'facts', 'custom'])) &&
+        (!('format' in data) || (data.format is string && data.format in ['shorts_9_16', 'tiktok_9_16', 'youtube_16_9', 'square_1_1'])) &&
+        (!('script' in data) || (data.script is string && data.script.size() <= 10000)) &&
+        (!('tags' in data) || (data.tags is list && data.tags.size() <= 50));
+    }
+
+    function isValidMedia(data) {
+      return data.keys().hasAll(['name', 'mediaType', 'url', 'ownerId']) &&
+        data.keys().hasOnly(['name', 'mediaType', 'url', 'size', 'duration', 'width', 'height', 'tags', 'ownerId', 'createdAt']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 255 &&
+        data.mediaType is string && (data.mediaType in ['video', 'audio', 'image']) &&
+        data.url is string && data.url.size() <= 500 &&
+        data.ownerId == request.auth.uid &&
+        (!('tags' in data) || (data.tags is list && data.tags.size() <= 50));
+    }
+
+    function isValidRender(data) {
+      return data.keys().hasAll(['projectId', 'status', 'ownerId']) &&
+        data.keys().hasOnly(['projectId', 'status', 'progress', 'outputPath', 'outputUrl', 'error', 'ownerId', 'createdAt', 'updatedAt']) &&
+        data.projectId is string && data.projectId.size() <= 128 &&
+        data.status is string && (data.status in ['queued', 'processing', 'completed', 'failed']) &&
+        data.ownerId == request.auth.uid &&
+        (!('error' in data) || (data.error is string && data.error.size() <= 2000));
+    }
+
+    function isValidPublication(data) {
+      return data.keys().hasAll(['projectId', 'platform', 'status', 'ownerId']) &&
+        data.keys().hasOnly(['projectId', 'platform', 'status', 'title', 'description', 'privacy', 'scheduledTime', 'publishedTime', 'externalId', 'externalUrl', 'channelHandle', 'error', 'ownerId', 'createdAt']) &&
+        data.projectId is string && data.projectId.size() <= 128 &&
+        data.platform is string && (data.platform in ['youtube', 'tiktok', 'metricool_bridge']) &&
+        data.status is string && (data.status in ['draft', 'scheduled', 'publishing', 'published', 'failed']) &&
+        data.ownerId == request.auth.uid &&
+        (!('title' in data) || (data.title is string && data.title.size() <= 200)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 5000));
+    }
+
+    function isValidLog(data) {
+      return data.keys().hasAll(['action', 'category', 'details', 'ownerId', 'timestamp']) &&
+        data.keys().hasOnly(['action', 'category', 'details', 'userEmail', 'status', 'timestamp', 'ownerId']) &&
+        data.action is string && data.action.size() <= 100 &&
+        data.category is string && data.category.size() <= 50 &&
+        data.details is string && data.details.size() <= 2000 &&
+        data.ownerId == request.auth.uid;
+    }
+
+    function isValidAutomation(data) {
+      return data.keys().hasAll(['name', 'enabled', 'ownerId']) &&
+        data.keys().hasOnly(['name', 'enabled', 'frequency', 'category', 'targetDuration', 'targetPlatforms', 'approvalRequired', 'monthlyBudgetCap', 'currentMonthSpend', 'lastRun', 'nextRun', 'ownerId']) &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.enabled is bool &&
+        data.ownerId == request.auth.uid &&
+        (!('targetPlatforms' in data) || (data.targetPlatforms is list && data.targetPlatforms.size() <= 10));
+    }
+
+    function isValidConnectedAccount(data) {
+      return data.keys().hasAll(['platform', 'handle', 'connected', 'ownerId']) &&
+        data.keys().hasOnly(['platform', 'handle', 'channelTitle', 'channelId', 'connected', 'connectedAt', 'scopes', 'statusMessage', 'ownerId']) &&
+        data.platform is string && (data.platform in ['youtube', 'tiktok', 'metricool']) &&
+        data.handle is string && data.handle.size() <= 100 &&
+        data.connected is bool &&
+        data.ownerId == request.auth.uid &&
+        (!('scopes' in data) || (data.scopes is list && data.scopes.size() <= 20));
+    }
+
+    // Collections
+    match /users/{userId} {
+      allow get: if isConfiguredOwner() && request.auth.uid == userId;
+      allow list: if false; // Users cannot be enumerated
+      allow create: if isConfiguredOwner() && request.auth.uid == userId && isValidUser(incoming());
+      allow update: if isConfiguredOwner() && request.auth.uid == userId && isValidUser(incoming()) &&
+        incoming().email == existing().email &&
+        incoming().role == existing().role;
+      allow delete: if false;
+    }
+
+    match /projects/{projectId} {
+      allow get: if isConfiguredOwner() && isValidId(projectId) && existing().ownerId == request.auth.uid;
+      allow list: if isConfiguredOwner() && resource.data.ownerId == request.auth.uid;
+      allow create: if isConfiguredOwner() && isValidId(projectId) && isValidProject(incoming());
+      allow update: if isConfiguredOwner() && isValidId(projectId) && isValidProject(incoming()) &&
+        incoming().ownerId == existing().ownerId;
+      allow delete: if isConfiguredOwner() && isValidId(projectId) && existing().ownerId == request.auth.uid;
+    }
+
+    match /media/{mediaId} {
+      allow get: if isConfiguredOwner() && isValidId(mediaId) && existing().ownerId == request.auth.uid;
+      allow list: if isConfiguredOwner() && resource.data.ownerId == request.auth.uid;
+      allow create: if isConfiguredOwner() && isValidId(mediaId) && isValidMedia(incoming());
+      allow update: if isConfiguredOwner() && isValidId(mediaId) && isValidMedia(incoming()) &&
+        incoming().ownerId == existing().ownerId;
+      allow delete: if isConfiguredOwner() && isValidId(mediaId) && existing().ownerId == request.auth.uid;
+    }
+
+    match /renders/{renderId} {
+      allow get: if isConfiguredOwner() && isValidId(renderId) && existing().ownerId == request.auth.uid;
+      allow list: if isConfiguredOwner() && resource.data.ownerId == request.auth.uid;
+      allow create: if isConfiguredOwner() && isValidId(renderId) && isValidRender(incoming());
+      allow update: if isConfiguredOwner() && isValidId(renderId) && isValidRender(incoming()) &&
+        incoming().ownerId == existing().ownerId;
+      allow delete: if isConfiguredOwner() && isValidId(renderId) && existing().ownerId == request.auth.uid;
+    }
+
+    match /publications/{publicationId} {
+      allow get: if isConfiguredOwner() && isValidId(publicationId) && existing().ownerId == request.auth.uid;
+      allow list: if isConfiguredOwner() && resource.data.ownerId == request.auth.uid;
+      allow create: if isConfiguredOwner() && isValidId(publicationId) && isValidPublication(incoming());
+      allow update: if isConfiguredOwner() && isValidId(publicationId) && isValidPublication(incoming()) &&
+        incoming().ownerId == existing().ownerId;
+      allow delete: if isConfiguredOwner() && isValidId(publicationId) && existing().ownerId == request.auth.uid;
+    }
+
+    match /activity_logs/{logId} {
+      allow get: if isConfiguredOwner() && isValidId(logId) && existing().ownerId == request.auth.uid;
+      allow list: if isConfiguredOwner() && resource.data.ownerId == request.auth.uid;
+      allow create: if isConfiguredOwner() && isValidId(logId) && isValidLog(incoming());
+      allow update: if false; // Append-only audit logs
+      allow delete: if false; // Audit trail cannot be deleted
+    }
+
+    match /automations/{automationId} {
+      allow get: if isConfiguredOwner() && isValidId(automationId) && existing().ownerId == request.auth.uid;
+      allow list: if isConfiguredOwner() && resource.data.ownerId == request.auth.uid;
+      allow create: if isConfiguredOwner() && isValidId(automationId) && isValidAutomation(incoming());
+      allow update: if isConfiguredOwner() && isValidId(automationId) && isValidAutomation(incoming()) &&
+        incoming().ownerId == existing().ownerId;
+      allow delete: if isConfiguredOwner() && isValidId(automationId) && existing().ownerId == request.auth.uid;
+    }
+
+    match /connected_accounts/{accountId} {
+      allow get: if isConfiguredOwner() && isValidId(accountId) && existing().ownerId == request.auth.uid;
+      allow list: if isConfiguredOwner() && resource.data.ownerId == request.auth.uid;
+      allow create: if isConfiguredOwner() && isValidId(accountId) && isValidConnectedAccount(incoming());
+      allow update: if isConfiguredOwner() && isValidId(accountId) && isValidConnectedAccount(incoming()) &&
+        incoming().ownerId == existing().ownerId;
+      allow delete: if isConfiguredOwner() && isValidId(accountId) && existing().ownerId == request.auth.uid;
+    }
+  }
+}

@@ -1,0 +1,183 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Owner profile and security configuration for HardLife Creator Studio",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "Owner Google email address" },
+        "displayName": { "type": "string", "maxLength": 100, "description": "Display name" },
+        "role": { "type": "string", "enum": ["owner", "admin"], "description": "System role" },
+        "avatarUrl": { "type": "string", "maxLength": 500, "description": "Avatar photo URL" },
+        "createdAt": { "type": "string", "description": "Creation timestamp ISO string" },
+        "updatedAt": { "type": "string", "description": "Update timestamp ISO string" }
+      },
+      "required": ["email", "role"]
+    },
+    "VideoProject": {
+      "title": "VideoProject",
+      "description": "Video production project with script, storyboard, timeline, and export parameters",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "maxLength": 200, "description": "Project title" },
+        "description": { "type": "string", "maxLength": 5000, "description": "Video description" },
+        "category": { "type": "string", "enum": ["gaming", "towboats", "tarot", "comedy", "facts", "custom"], "description": "Content niche" },
+        "status": { "type": "string", "enum": ["draft", "editing", "rendering", "rendered", "scheduled", "published", "failed"], "description": "Workflow status" },
+        "format": { "type": "string", "enum": ["shorts_9_16", "tiktok_9_16", "youtube_16_9", "square_1_1"], "description": "Video aspect ratio and target format" },
+        "duration": { "type": "number", "description": "Target or actual duration in seconds" },
+        "timeline": { "type": "object", "description": "Multitrack timeline state including clips, audio, captions, transitions" },
+        "script": { "type": "string", "maxLength": 10000, "description": "Narrative or video script" },
+        "voiceId": { "type": "string", "maxLength": 100, "description": "Selected AI voice or TTS ID" },
+        "tags": { "type": "array", "description": "Video tags and keywords" },
+        "ownerId": { "type": "string", "maxLength": 128, "description": "Owner UID" },
+        "renderedUrl": { "type": "string", "maxLength": 500, "description": "URL to final rendered MP4" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "description": "Last updated timestamp" }
+      },
+      "required": ["title", "ownerId", "status"]
+    },
+    "MediaAsset": {
+      "title": "MediaAsset",
+      "description": "Uploaded or generated media asset in the creator media library",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 255, "description": "Asset filename" },
+        "mediaType": { "type": "string", "enum": ["video", "audio", "image"], "description": "Asset type" },
+        "url": { "type": "string", "maxLength": 500, "description": "Asset source or stored URL" },
+        "size": { "type": "number", "description": "File size in bytes" },
+        "duration": { "type": "number", "description": "Duration in seconds" },
+        "width": { "type": "number", "description": "Pixel width" },
+        "height": { "type": "number", "description": "Pixel height" },
+        "tags": { "type": "array", "description": "Searchable tags" },
+        "ownerId": { "type": "string", "maxLength": 128, "description": "Owner UID" },
+        "createdAt": { "type": "string", "description": "Upload timestamp" }
+      },
+      "required": ["name", "mediaType", "url", "ownerId"]
+    },
+    "RenderJob": {
+      "title": "RenderJob",
+      "description": "Background FFmpeg video render queue job",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string", "maxLength": 128, "description": "Associated project ID" },
+        "status": { "type": "string", "enum": ["queued", "processing", "completed", "failed"], "description": "Render status" },
+        "progress": { "type": "number", "description": "Completion percentage 0 to 100" },
+        "outputPath": { "type": "string", "maxLength": 500, "description": "Server file path" },
+        "outputUrl": { "type": "string", "maxLength": 500, "description": "Rendered video downloadable URL" },
+        "error": { "type": "string", "maxLength": 2000, "description": "Failure details if failed" },
+        "ownerId": { "type": "string", "maxLength": 128, "description": "Owner UID" },
+        "createdAt": { "type": "string", "description": "Job start timestamp" },
+        "updatedAt": { "type": "string", "description": "Last update timestamp" }
+      },
+      "required": ["projectId", "status", "ownerId"]
+    },
+    "Publication": {
+      "title": "Publication",
+      "description": "Publishing schedule and verified status across YouTube and TikTok",
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string", "maxLength": 128, "description": "Project ID" },
+        "platform": { "type": "string", "enum": ["youtube", "tiktok", "metricool_bridge"], "description": "Destination platform" },
+        "status": { "type": "string", "enum": ["draft", "scheduled", "publishing", "published", "failed"], "description": "Publication status" },
+        "title": { "type": "string", "maxLength": 200, "description": "Platform title" },
+        "description": { "type": "string", "maxLength": 5000, "description": "Platform description / caption" },
+        "privacy": { "type": "string", "enum": ["public", "unlisted", "private", "draft"], "description": "Privacy level" },
+        "scheduledTime": { "type": "string", "description": "Scheduled publish ISO date time" },
+        "publishedTime": { "type": "string", "description": "Actual publish ISO date time" },
+        "externalId": { "type": "string", "maxLength": 128, "description": "Video ID on platform" },
+        "externalUrl": { "type": "string", "maxLength": 500, "description": "Direct verified URL to live video" },
+        "channelHandle": { "type": "string", "maxLength": 100, "description": "Target handle e.g. @towboater2011" },
+        "error": { "type": "string", "maxLength": 1000, "description": "Platform error details if any" },
+        "ownerId": { "type": "string", "maxLength": 128, "description": "Owner UID" },
+        "createdAt": { "type": "string", "description": "Record creation timestamp" }
+      },
+      "required": ["projectId", "platform", "status", "ownerId"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Audit record of actions (edits, renders, uploads, publications, MCP tool calls)",
+      "type": "object",
+      "properties": {
+        "action": { "type": "string", "maxLength": 100, "description": "Action name" },
+        "category": { "type": "string", "maxLength": 50, "description": "Category e.g. render, publish, oauth, mcp" },
+        "details": { "type": "string", "maxLength": 2000, "description": "Human-readable summary and metadata" },
+        "userEmail": { "type": "string", "maxLength": 100, "description": "Actor email" },
+        "status": { "type": "string", "enum": ["success", "warning", "error", "info"], "description": "Log level" },
+        "timestamp": { "type": "string", "description": "Event timestamp" },
+        "ownerId": { "type": "string", "maxLength": 128, "description": "Owner UID" }
+      },
+      "required": ["action", "category", "details", "ownerId", "timestamp"]
+    },
+    "AutomationRule": {
+      "title": "AutomationRule",
+      "description": "Persistent background automation for automated content production",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "maxLength": 100, "description": "Automation title" },
+        "enabled": { "type": "boolean", "description": "Is automation active" },
+        "frequency": { "type": "string", "enum": ["daily", "weekly_3", "weekly_5", "custom"], "description": "Publishing pace" },
+        "category": { "type": "string", "enum": ["gaming", "towboats", "tarot", "comedy", "facts"], "description": "Niche focus" },
+        "targetDuration": { "type": "number", "description": "Target duration in seconds (e.g. 58 for Shorts, 180 for TikTok Rewards)" },
+        "targetPlatforms": { "type": "array", "description": "Platforms e.g. ['youtube', 'tiktok']" },
+        "approvalRequired": { "type": "boolean", "description": "Whether manual creator approval is mandated before publishing" },
+        "monthlyBudgetCap": { "type": "number", "description": "Max AI/compute spend per month in USD" },
+        "currentMonthSpend": { "type": "number", "description": "Current month accumulated spend" },
+        "lastRun": { "type": "string", "description": "Last run ISO date" },
+        "nextRun": { "type": "string", "description": "Next scheduled run ISO date" },
+        "ownerId": { "type": "string", "maxLength": 128, "description": "Owner UID" }
+      },
+      "required": ["name", "enabled", "ownerId"]
+    },
+    "ConnectedAccount": {
+      "title": "ConnectedAccount",
+      "description": "Connected social media channels (@towboater2011, @otis0239)",
+      "type": "object",
+      "properties": {
+        "platform": { "type": "string", "enum": ["youtube", "tiktok", "metricool"], "description": "Service name" },
+        "handle": { "type": "string", "maxLength": 100, "description": "Channel handle" },
+        "channelTitle": { "type": "string", "maxLength": 200, "description": "Display name" },
+        "channelId": { "type": "string", "maxLength": 100, "description": "Platform account ID" },
+        "connected": { "type": "boolean", "description": "Connection status" },
+        "connectedAt": { "type": "string", "description": "Connection timestamp" },
+        "scopes": { "type": "array", "description": "Authorized scopes" },
+        "statusMessage": { "type": "string", "maxLength": 500, "description": "Status or review notice" },
+        "ownerId": { "type": "string", "maxLength": 128, "description": "Owner UID" }
+      },
+      "required": ["platform", "handle", "connected", "ownerId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Owner user profile"
+    },
+    "/projects/{projectId}": {
+      "schema": "VideoProject",
+      "description": "Creator video projects"
+    },
+    "/media/{mediaId}": {
+      "schema": "MediaAsset",
+      "description": "Media library assets"
+    },
+    "/renders/{renderId}": {
+      "schema": "RenderJob",
+      "description": "Video rendering background jobs"
+    },
+    "/publications/{publicationId}": {
+      "schema": "Publication",
+      "description": "Publishing calendar and live distribution records"
+    },
+    "/activity_logs/{logId}": {
+      "schema": "ActivityLog",
+      "description": "Immutable audit log of all video operations"
+    },
+    "/automations/{automationId}": {
+      "schema": "AutomationRule",
+      "description": "Automated video generation schedules and budgets"
+    },
+    "/connected_accounts/{accountId}": {
+      "schema": "ConnectedAccount",
+      "description": "OAuth connected accounts and publishing credentials"
+    }
+  }
+}
